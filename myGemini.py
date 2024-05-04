@@ -1,7 +1,7 @@
 import google.generativeai as genai
 # agent class framework
 class Agent:
-    def __init__(self,model='gemini-1.0-pro-latest',tools=None,auto_funct_call=False):
+    def __init__(self,model='gemini-1.0-pro-latest',tools=None):
         self.response=None
         self.messages=None
         self.tools=tools
