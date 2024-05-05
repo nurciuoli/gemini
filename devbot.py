@@ -1,6 +1,6 @@
 import google.generativeai as genai
 from google.api_core import retry
-
+import os
 from random import randint
 from typing import Iterable
 features = []  # The in-progress order.
@@ -8,16 +8,20 @@ inprogress_features = []  # The confirmed, completed order.
 
 project_notes=['the project is blank']
 implemented_files=[]
-
 kill_switch=False
+import textwrap
+
+def format_response(text):
+  text = text.replace('•', '  *')
+  return textwrap.indent(text, '> ', predicate=lambda _: True)
 
 def say_goodbye()->None:
    """Use if the user wants to end the session"""
    global kill_switch
    kill_switch=True
 
-def project_status()-> tuple[Iterable[tuple[int,str]],Iterable[str]]:
-  """Returns context on the project and a list of implemented files"""
+def project_status()-> Iterable[tuple[int,str]]:
+  """Returns notes on what the project is about"""
   return (project_notes,implemented_files)
 
 def add_project_note(note: str)-> None:
@@ -72,26 +76,78 @@ def confirm_features() -> str:
   return input('Is this correct? ')
 
 
-def ship_features() -> int:
-  """Submit the order to the devs to have them start building the features
-
-  Returns:
-    The estimated number of minutes until done
+def add_to_file(filename: str,content: str) -> str:
+    """Use to write content to the project into files
+    Note: remember to include both a name and file extension
+    Examples: 
+        filename: main.py, templates/index.html, ect
+        content: print('hello world')
+    Returns:
+        A status message about the file 
   """
-  inprogress_features[:] = features.copy()
-  implemented_files[:]=features.copy()
-  clear_features()
+    try:
+        full_filepath = 'sandbox/' + filename
+        print(content)
+        with open(full_filepath, "w") as file:  # Use "w" for writing only
+            file.write(content)  # Write the string directly
+            implemented_files.append(filename)
+        return f'{filename} was successfully written'
+    except Exception as e:
+       print(e)
+       return 'file was not successfully archive'
+    
+def overwrite_file(n: int, content: str) -> str:
+    """Overwrite the nth (one-based) file in the implemented_files list
+    Note: remember to include both a name and file extension
+    Examples: 
+        main.py, templates/index.html, ect
+    Returns:
+        A status message about the file 
+  """
+    try:
+        full_filepath = 'sandbox/' + implemented_files[(n-1)]
+        with open(full_filepath, "w") as file:  # Use "w" for writing only
+            file.writelines(content)  # Write the string directly
+        return f'{implemented_files[(n-1)]} was successfully written'
+    except:
+       return 'file was not successfully archive' 
+    
 
-  # TODO(you!): Implement coffee fulfilment.
-  return randint(1, 10)
+def delete_file(n: int) -> str:
+    """Remove the nth (one-based) file in the implemented_files list
 
+    Returns:
+        The file that was removed.
+    """
+    file_path = implemented_files.pop(int(n) - 1)
+    try:
+        os.remove(f'sandbox/{file_path}')
+        return f"File '{file_path}' deleted successfully."
+    except FileNotFoundError:
+        return f"File '{file_path}' not found."
+    
+def check_file_contents(n: int)->str:
+    """Check on nth (one-based) file in the implemented_files list
 
+    Returns:
+        the fil;e contents
+    """
+    file_path = implemented_files.pop(int(n) - 1)
+    try:
+        full_filepath = 'sandbox/' + file_path
+        with open(full_filepath, "w") as file:  # Use "w" for writing only
+            contents=file.read()
+        return contents
+    except FileNotFoundError:
+        return f"File '{file_path}' not found."
+    
 
 def run_bot(PROJECT_MANAGER_PROMPT):
-
     try:
 
-        tools = [request_feature, get_features, remove_feature, clear_features, confirm_features, ship_features,project_status,add_project_note,remove_project_note,say_goodbye]
+        tools = [request_feature, get_features, remove_feature, clear_features, confirm_features,
+                 add_to_file,overwrite_file,delete_file,check_file_contents,
+                 project_status,add_project_note,remove_project_note,say_goodbye]
 
         # Toggle this to switch between Gemini 1.5 with a system instruction, or Gemini 1.0 Pro.
         use_sys_inst = False
